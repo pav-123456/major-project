@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI FAQ Chatbot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0px); }
+    }
+    .bot-icon { animation: float 3s ease-in-out infinite; }
+    .message {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s ease-out;
+    }
+    .message.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .typing-indicator span {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #4f46e5;
+      margin: 0 2px;
+      opacity: 0.4;
+    }
+    .typing-indicator span:nth-child(1) { animation: bounce 1s infinite; }
+    .typing-indicator span:nth-child(2) { animation: bounce 1s infinite 0.2s; }
+    .typing-indicator span:nth-child(3) { animation: bounce 1s infinite 0.4s; }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); opacity: 0.4; }
+      50% { transform: translateY(-5px); opacity: 1; }
+    }
+    .feedback-button { transition: all 0.2s ease; }
+    .feedback-button:hover { transform: scale(1.1); }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-md">
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+      <!-- Chat header -->
+      <div class="bg-indigo-600 text-white p-4 flex items-center">
+        <div class="bot-icon bg-white rounded-full p-2 mr-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold">Nova – AI FAQ Assistant</h1>
+          <p class="text-indigo-200 text-sm">Ask me anything about our services</p>
+        </div>
+      </div>
+
+      <!-- Chat container -->
+      <div id="chat-container" class="h-96 overflow-y-auto p-4 space-y-3">
+        <div class="message visible">
+          <div class="flex items-start">
+            <div class="bg-indigo-100 rounded-lg p-3 max-w-xs">
+              <p class="text-gray-800">Hi there! I’m Nova, your smart assistant. Ask me anything about our services, pricing, or support. 😊</p>
+              <div class="text-xs text-gray-400 mt-1">🕒 Just now</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input section -->
+      <div class="border-t border-gray-200 p-4 bg-gray-50">
+        <div class="flex space-x-2">
+          <input id="user-input" type="text" placeholder="Type your question here..."
+            class="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            autocomplete="off">
+          <button id="send-button"
+            class="bg-indigo-600 text-white rounded-full p-2 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
+        </div>
+        <div class="mt-2 text-xs text-gray-500 text-center">
+          Try asking: "What are your business hours?" or "Do you offer internships?"
+        </div>
+        <button id="reset-chat" class="mt-3 text-sm text-indigo-600 hover:underline block mx-auto">🔄 Reset Chat</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const faqDatabase = [
+      {
+        keywords: ['hello', 'hi', 'hey'],
+        response: "Hello there! How can I assist you today?",
+        followUp: []
+      },
+      {
+        keywords: ['hours', 'open', 'close', 'business hours', 'time'],
+        response: "Our business hours are Monday to Friday from 9:00 AM to 6:00 PM. We're closed on weekends and public holidays.",
+        followUp: [
+          "Would you like to schedule an appointment outside these hours?",
+          "Do you need directions to our location?"
+        ]
+      },
+      {
+        keywords: ['contact', 'email', 'phone', 'number', 'address'],
+        response: "You can contact us via:\n- Phone: (123) 456-7890\n- Email: support@example.com\n- Address: 123 Business Ave, City, Country",
+        followUp: [
+          "Would you like me to connect you with a specific department?",
+          "Should I send these contact details to your email?"
+        ]
+      },
+      {
+        keywords: ['pricing', 'cost', 'price', 'fee', 'how much'],
+        response: "Our pricing depends on the service:\n- Basic: $9.99/month\n- Pro: $19.99/month\n- Enterprise: Custom pricing.",
+        followUp: [
+          "Would you like a detailed breakdown of features?",
+          "Can I help you choose a plan?"
+        ]
+      },
+      {
+        keywords: ['features', 'services', 'offer', 'capabilities'],
+        response: "We offer:\n- AI-powered analytics\n- 24/7 support\n- Secure cloud storage\n- Custom integrations.",
+        followUp: ["Is there a specific feature you'd like to know more about?"]
+      },
+      {
+        keywords: ['support', 'help', 'issue', 'problem'],
+        response: "We can help with:\n- Technical problems\n- Billing\n- Account issues\n- Feature requests.",
+        followUp: [
+          "Can you describe the issue in more detail?",
+          "Is this affecting your ability to use our service?"
+        ]
+      },
+      {
+        keywords: ['internship', 'internships', 'offer internships', 'student job'],
+        response: "Yes, we offer remote internships for students in tech, marketing, and support. Applications are open all year!",
+        followUp: [
+          "Would you like the link to apply?",
+          "Do you want to know the eligibility criteria?"
+        ]
+      },
+      {
+        keywords: ['location', 'where', 'map'],
+        response: "We are located at 123 Business Ave, Tech City. Find us on Google Maps: 'Our Company Name'.",
+        followUp: ["Would you like me to send the map link?", "Do you want directions from your location?"]
+      },
+      {
+        keywords: ['refund', 'money back', 'cancel subscription'],
+        response: "We offer a 30-day money-back guarantee. Cancel anytime from your dashboard.",
+        followUp: ["Need help navigating the dashboard?", "Want me to send refund steps?"]
+      },
+      {
+        keywords: ['trial', 'free trial', 'demo'],
+        response: "Yes! We offer a 14-day free trial. No credit card required.",
+        followUp: ["Want me to activate a free trial for you?", "Would you like to schedule a demo?"]
+      },
+      {
+        keywords: ['thank', 'thanks', 'appreciate'],
+        response: "You're very welcome! Is there anything else I can help you with today?",
+        followUp: []
+      }
+    ];
+
+    const chatContainer = document.getElementById('chat-container');
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+
+    function addMessage(text, isUser = false) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message';
+
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const bubble = `
+        <div class="${isUser ? 'flex items-start justify-end' : 'flex items-start'}">
+          <div class="${isUser ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-gray-800'} rounded-lg p-3 max-w-xs">
+            <p>${text}</p>
+            <div class="text-xs text-gray-400 mt-1">${time}</div>
+          </div>
+        </div>
+      `;
+      messageDiv.innerHTML = bubble;
+      chatContainer.appendChild(messageDiv);
+      setTimeout(() => {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        messageDiv.classList.add('visible');
+      }, 10);
+    }
+
+    function showTypingIndicator() {
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'flex items-start typing-indicator';
+      typingDiv.innerHTML = `
+        <div class="bg-indigo-100 rounded-lg p-3">
+          <div class="flex space-x-1">
+            <span></span><span></span><span></span>
+          </div>
+        </div>`;
+      chatContainer.appendChild(typingDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      return typingDiv;
+    }
+
+    function hideTypingIndicator(typingDiv) {
+      if (typingDiv && typingDiv.parentNode) {
+        typingDiv.parentNode.removeChild(typingDiv);
+      }
+    }
+
+    function processInput() {
+      const inputText = userInput.value.trim();
+      if (!inputText) return;
+      addMessage(inputText, true);
+      userInput.value = '';
+      const typingIndicator = showTypingIndicator();
+
+      setTimeout(() => {
+        hideTypingIndicator(typingIndicator);
+        const lowerInput = inputText.toLowerCase();
+        let bestMatch = null, maxScore = 0;
+
+        for (const faq of faqDatabase) {
+          let score = 0;
+          for (const keyword of faq.keywords) {
+            if (lowerInput.includes(keyword)) score++;
+          }
+          if (score > maxScore) {
+            maxScore = score;
+            bestMatch = faq;
+          }
+        }
+
+        if (bestMatch && maxScore > 0) {
+          addMessage(bestMatch.response);
+
+          // Feedback buttons
+          const feedbackDiv = document.createElement('div');
+          feedbackDiv.className = 'flex space-x-2 mt-1 ml-1';
+          feedbackDiv.innerHTML = `
+            <button class="feedback-button bg-green-100 text-green-700 px-2 py-1 rounded text-sm hover:bg-green-200">👍 Helpful</button>
+            <button class="feedback-button bg-red-100 text-red-700 px-2 py-1 rounded text-sm hover:bg-red-200">👎 Not Helpful</button>`;
+          chatContainer.appendChild(feedbackDiv);
+
+          // Quick replies
+          if (bestMatch.followUp.length > 0) {
+            setTimeout(() => {
+              addMessage("Follow-up:\n" + bestMatch.followUp.join("\n\n"));
+              const quickReplies = document.createElement('div');
+              quickReplies.className = 'flex flex-wrap gap-2 mt-2';
+              bestMatch.followUp.forEach(reply => {
+                const btn = document.createElement('button');
+                btn.className = 'bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm hover:bg-indigo-200';
+                btn.innerText = reply;
+                btn.onclick = () => addMessage(reply, true);
+                quickReplies.appendChild(btn);
+              });
+              chatContainer.appendChild(quickReplies);
+              chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, 500);
+          }
+        } else {
+          addMessage("I'm not sure I understand. Could you rephrase your question?");
+        }
+      }, 1500 + Math.random() * 1000);
+    }
+
+    sendButton.addEventListener('click', processInput);
+    userInput.addEventListener('keypress', e => { if (e.key === 'Enter') processInput(); });
+    document.getElementById('reset-chat').addEventListener('click', () => {
+      chatContainer.innerHTML = '';
+      addMessage("Hi there! I’m Nova, your smart assistant. Ask me anything about our services, pricing, or support. 😊");
+    });
+  </script>
+</body>
+</html>
